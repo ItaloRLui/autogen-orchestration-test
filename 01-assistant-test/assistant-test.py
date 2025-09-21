@@ -37,9 +37,11 @@ async def main() -> None:
 
     cancellation_token = CancellationToken()
 
-    response = await assistant.on_messages([TextMessage(content="Hello!", source="user")], cancellation_token)
-    print(response)
+    command = await asyncio.to_thread(input, "Enter command to LLM: ")
 
-    custom_model_client.close()
+    response = await assistant.on_messages([TextMessage(content=command, source="user")], cancellation_token)
+    print(response.chat_message.content)
+
+    await custom_model_client.close()
 
 asyncio.run(main())
