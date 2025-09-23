@@ -3,6 +3,7 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_core import CancellationToken
 from autogen_core.models import ModelFamily
 from autogen_agentchat.messages import TextMessage
+from autogen_agentchat.tools import AgentTool
 from dotenv import load_dotenv
 import os
 import asyncio
@@ -29,10 +30,36 @@ async def main() -> None:
         timeout = 400, # timeout,
     )
 
+    web_searcher = AssistantAgent(
+        name = "web_searcher",
+        model_client = custom_model_client,
+        description = "An web searcher agent, for using the web search tool.",
+        system_message = "Search for information on the Internet.",
+    )
+    web_search_tool = AgentTool(agent = web_searcher)
+
+    main_model_client = OpenAIChatCompletionClient(
+        model = lm_model, #the name of your running model
+        base_url = base_url, #the local address of the api
+        api_key = api_key, # just a placeholder
+        model_info = {
+            "vision": False,
+            "function_calling": True,
+            "json_output": True,
+            "family": ModelFamily.O3,
+            "structured_output": True,
+        },
+        seed = 42,  # seed for caching and reproducibility
+        temperature = 0,  # temperature for sampling
+        timeout = 400, # timeout,
+        parallel_tool_calls = False,
+    )
+
     assistant = AssistantAgent(
         name = "assistant",
-        model_client = custom_model_client,
-        description = "A basic first Agent",
+        model_client = main_model_client,
+        tools=[web_search_tool],
+        description = "A basic assistant agent.",
         system_message = "You are a helpful assistant.",
     )
 
