@@ -3,10 +3,14 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_core import CancellationToken
 from autogen_core.models import ModelFamily
 from autogen_agentchat.messages import TextMessage
-from autogen_agentchat.tools import AgentTool
+from autogen_agentchat.ui import Console
 from dotenv import load_dotenv
 import os
 import asyncio
+
+def web_search_mock(query: str) -> str:
+    """Find information on the web"""
+    return "The Labrador Retriever or simply Labrador is a British breed of retriever gun dog. "
 
 async def main() -> None:
     load_dotenv()
@@ -30,45 +34,23 @@ async def main() -> None:
         timeout = 400, # timeout,
     )
 
-    web_searcher = AssistantAgent(
-        name = "web_searcher",
-        model_client = custom_model_client,
-        description = "An web searcher agent, for using the web search tool.",
-        system_message = "Search for information on the Internet.",
-    )
-    web_search_tool = AgentTool(agent = web_searcher)
-
-    main_model_client = OpenAIChatCompletionClient(
-        model = lm_model, #the name of your running model
-        base_url = base_url, #the local address of the api
-        api_key = api_key, # just a placeholder
-        model_info = {
-            "vision": False,
-            "function_calling": True,
-            "json_output": True,
-            "family": ModelFamily.O3,
-            "structured_output": True,
-        },
-        seed = 42,  # seed for caching and reproducibility
-        temperature = 0,  # temperature for sampling
-        timeout = 400, # timeout,
-        parallel_tool_calls = False,
-    )
-
     assistant = AssistantAgent(
         name = "assistant",
-        model_client = main_model_client,
-        tools=[web_search_tool],
-        description = "A basic assistant agent.",
-        system_message = "You are a helpful assistant.",
+        model_client = custom_model_client,
+        tools = [web_search_mock],
+        description = "An agent that uses tools to solve tasks.",
+        system_message = "Use tools to solve tasks.",
     )
 
     cancellation_token = CancellationToken()
 
-    command = await asyncio.to_thread(input, "Enter command to LLM: ")
+    for question in range(1, 3): # Teste com dois comandos seguidos. Dentro de uma mesma sessão, a AI mantém memória das questões.
 
-    response = await assistant.on_messages([TextMessage(content=command, source="user")], cancellation_token)
-    print(response.chat_message.content)
+        command = await asyncio.to_thread(input, f"Enter command n° {question} to AI: ")
+
+        await Console(assistant.on_messages_stream(messages = [TextMessage(content = command, source = "User")],
+                                                   cancellation_token = cancellation_token),
+        output_stats = True)
 
     await custom_model_client.close()
 
