@@ -1,16 +1,13 @@
-from autogen_agentchat.agents import AssistantAgent
+from autogen_ext.agents.web_surfer import MultimodalWebSurfer
 from autogen_ext.models.openai import OpenAIChatCompletionClient
-from autogen_core import CancellationToken
 from autogen_core.models import ModelFamily
 from autogen_agentchat.messages import TextMessage
+from autogen_agentchat.conditions import MaxMessageTermination
+from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_agentchat.ui import Console
 from dotenv import load_dotenv
 import os
 import asyncio
-
-def web_search_mock(query: str) -> str:
-    """Find information on the web"""
-    return "The Labrador Retriever or simply Labrador is a British breed of retriever gun dog. "
 
 async def main() -> None:
     load_dotenv()
@@ -34,24 +31,31 @@ async def main() -> None:
         timeout = 400, # timeout,
     )
 
-    assistant = AssistantAgent(
-        name = "assistant",
+    web_surfer_agent = MultimodalWebSurfer(
+        name = "MultimodalWebSurfer",
         model_client = custom_model_client,
-        tools = [web_search_mock],
-        description = "An agent that uses tools to solve tasks.",
-        system_message = "Use tools to solve tasks.",
+        description = "A multimodal agent that can interact with a Chromium-based browser to complete tasks."
     )
 
-    cancellation_token = CancellationToken()
+    agent_team = RoundRobinGroupChat(
+        participants = [web_surfer_agent],
+        name = "Round Robin Web Surfer Group Chat",
+        description = "Group chat that the web surfer agent uses",
+        max_turns = 3,
+    )
+    # Participantes do chat postam mensagens para todos os outros participantes
+    # Rodar comando "playwright install" para instalar navegador baseado em Chromium.
 
-    for question in range(1, 3): # Teste com dois comandos seguidos. Dentro de uma mesma sessão, a AI mantém memória das questões.
-        # Se a IA identificar que é necessário usar a ferramenta, ela retorna o resultado da função de mock.
-        command = await asyncio.to_thread(input, f"Enter command n° {question} to AI: ")
+    command = await asyncio.to_thread(input, "Enter command to Web Searcher AI: ")
 
-        await Console(assistant.on_messages_stream(messages = [TextMessage(content = command, source = "User")],
-                                                   cancellation_token = cancellation_token),
-        output_stats = True)
+    # Run the team and stream messages to the console
+    stream = agent_team.run_stream(
+                task = command,
+    )
+    await Console(stream)
 
+     # Close the browser controlled by the agent
+    await web_surfer_agent.close()
     await custom_model_client.close()
 
 asyncio.run(main())

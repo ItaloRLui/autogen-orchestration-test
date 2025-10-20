@@ -8,3 +8,5 @@ tiktoken
 autogenstudio
 streamlit
 arxiv
+aiofiles
+playwright
