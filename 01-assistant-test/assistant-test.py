@@ -1,5 +1,5 @@
 from autogen_agentchat.agents import AssistantAgent
-from autogen_ext.models.openai import OpenAIChatCompletionClient
+from autogen_ext.models.ollama import OllamaChatCompletionClient
 from autogen_core import CancellationToken
 from autogen_core.models import ModelFamily
 from autogen_agentchat.messages import TextMessage
@@ -11,22 +11,17 @@ async def main() -> None:
     load_dotenv()
     lm_model = os.getenv('LM_MODEL')
     base_url = os.getenv('BASE_URL')
-    api_key  = os.getenv('API_KEY')
 
-    custom_model_client = OpenAIChatCompletionClient(
+    custom_model_client = OllamaChatCompletionClient(
         model = lm_model, #the name of your running model
-        base_url = base_url, #the local address of the api
-        api_key = api_key, # just a placeholder
+        host = base_url, #the local address of the api
         model_info = {
             "vision": False,
             "function_calling": True,
             "json_output": True,
-            "family": ModelFamily.O3,
+            "family": ModelFamily.UNKNOWN,
             "structured_output": True,
         },
-        seed = 42,  # seed for caching and reproducibility
-        temperature = 0,  # temperature for sampling
-        timeout = 400, # timeout,
     )
 
     assistant = AssistantAgent(

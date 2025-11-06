@@ -1,8 +1,7 @@
 from autogen_ext.agents.web_surfer import MultimodalWebSurfer
-from autogen_ext.models.openai import OpenAIChatCompletionClient
+from autogen_agentchat.agents import AssistantAgent
+from autogen_ext.models.ollama import OllamaChatCompletionClient
 from autogen_core.models import ModelFamily
-from autogen_agentchat.messages import TextMessage
-from autogen_agentchat.conditions import MaxMessageTermination
 from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_agentchat.ui import Console
 from dotenv import load_dotenv
@@ -13,22 +12,17 @@ async def main() -> None:
     load_dotenv()
     lm_model = os.getenv('LM_MODEL')
     base_url = os.getenv('BASE_URL')
-    api_key  = os.getenv('API_KEY')
 
-    custom_model_client = OpenAIChatCompletionClient(
+    custom_model_client = OllamaChatCompletionClient(
         model = lm_model, #the name of your running model
-        base_url = base_url, #the local address of the api
-        api_key = api_key, # just a placeholder
+        host = base_url, #the local address of the api
         model_info = {
             "vision": False,
             "function_calling": True,
             "json_output": True,
-            "family": ModelFamily.O3,
+            "family": ModelFamily.UNKNOWN,
             "structured_output": True,
         },
-        seed = 42,  # seed for caching and reproducibility
-        temperature = 0,  # temperature for sampling
-        timeout = 400, # timeout,
     )
 
     web_surfer_agent = MultimodalWebSurfer(
@@ -37,11 +31,20 @@ async def main() -> None:
         description = "A multimodal agent that can interact with a Chromium-based browser to complete tasks."
     )
 
+    boss = AssistantAgent(
+        name = "organizer",
+        model_client = custom_model_client,
+        system_message = "Tell the other agents the next steps necessary to complete the given task. The other agents are able" \
+        "to use the internet and search for information.",
+        description = "An agent that coordinates the other agents efforts in a group chat to complete tasks.",
+        model_client_stream = True,
+    )
+
     agent_team = RoundRobinGroupChat(
-        participants = [web_surfer_agent],
+        participants = [boss, web_surfer_agent],
         name = "Round Robin Web Surfer Group Chat",
         description = "Group chat that the web surfer agent uses",
-        max_turns = 3,
+        # max_turns = 3,
     )
     # Participantes do chat postam mensagens para todos os outros participantes
     # Rodar comando "playwright install" para instalar navegador baseado em Chromium.
