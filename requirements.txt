@@ -10,3 +10,8 @@ streamlit
 arxiv
 aiofiles
 playwright
+beautifulsoup4
+bs4
+requests-html
+lxml[html_clean]
+pyppeteer>=0.2.2
