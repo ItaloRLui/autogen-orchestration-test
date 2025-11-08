@@ -2,7 +2,7 @@ autogen-agentchat
 autogen-core
 autogen-ext
 asyncio
-dotenv
+python-dotenv
 openai
 tiktoken
 autogenstudio
@@ -14,4 +14,5 @@ beautifulsoup4
 bs4
 requests-html
 lxml[html_clean]
-pyppeteer>=0.2.2
+pyppeteer
+ollama
